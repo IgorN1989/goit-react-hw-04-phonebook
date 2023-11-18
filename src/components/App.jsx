@@ -1,5 +1,6 @@
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import { nanoid } from 'nanoid';
+import toast, { Toaster } from 'react-hot-toast';
 
 import { ContactForm } from './ContactForm/ContactForm';
 import { Filter } from './Filter/Filter';
@@ -15,87 +16,68 @@ import {
 
 // ===========================================================
 
-export class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
-  };
-
-  changeFilter = newFilter => {
-    this.setState({
-      filter: newFilter,
-    });
-  };
-
-  componentDidMount() {
-    const savedContacts = localStorage.getItem('savedContacts');
-    if (savedContacts) {
-      this.setState({ contacts: JSON.parse(savedContacts) });
-    }
+const initialContacts = () => {
+  const savedContacts = localStorage.getItem('savedContacts');
+  if (savedContacts) {
+    return JSON.parse(savedContacts);
   }
+  return '';
+};
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.contacts !== this.state.contacts) {
-      localStorage.setItem(
-        'savedContacts',
-        JSON.stringify(this.state.contacts)
-      );
-    }
-  }
+export const App = () => {
+  const [contacts, setContacts] = useState(initialContacts);
+  const [filter, setFilter] = useState('');
 
-  getVisibleContacts = () => {
-    const { contacts, filter } = this.state;
-    return contacts.filter(contact =>
-      contact.name.toLowerCase().includes(filter.toLowerCase())
-    );
-  };
+  const visibleContacts = contacts.filter(contact =>
+    contact.name.toLowerCase().includes(filter.toLowerCase())
+  );
 
-  checkNewContact = newContact => {
-    return this.state.contacts.some(
+  useEffect(() => {
+    localStorage.setItem('savedContacts', JSON.stringify(contacts));
+  }, [contacts]);
+
+  const checkNewContact = newContact => {
+    return contacts.some(
       contact => contact.name.toLowerCase() === newContact.name.toLowerCase()
     );
   };
 
-  addContact = newContact => {
-    if (this.checkNewContact(newContact)) {
+  const addContact = newContact => {
+    if (checkNewContact(newContact)) {
       alert(`${newContact.name} is already in contacts.`);
       return;
     }
-    this.setState(prevState => ({
-      contacts: [...prevState.contacts, { ...newContact, id: nanoid() }],
-    }));
+    setContacts(prevState => [...prevState, { ...newContact, id: nanoid() }]);
+    toast.success(`Contact ${newContact.name} was added!`);
   };
 
-  deleteContact = contactId => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== contactId),
-    }));
+  const deleteContact = contactId => {
+    setContacts(prevState =>
+      prevState.filter(contact => contact.id !== contactId)
+    );
+    toast.success('Contact was deleted!');
   };
 
-  render() {
-    const { contacts, filter } = this.state;
+  const changeFilter = newFilter => {
+    setFilter(newFilter);
+  };
 
-    const visibleContacts = this.getVisibleContacts().sort(
-      (prevContact, nextContact) =>
-        prevContact.name.localeCompare(nextContact.name)
-    );
+  return (
+    <Container>
+      <MainHeader>Phonebook</MainHeader>
+      <ContactForm onAddContact={addContact} />
 
-    return (
-      <Container>
-        <MainHeader>Phonebook</MainHeader>
-        <ContactForm onAddContact={this.addContact} />
-
-        <SectionHeader>Contacts</SectionHeader>
-        <Filter filter={filter} onChangeFilter={this.changeFilter} />
-        {contacts.length ? (
-          <ContactList
-            contacts={visibleContacts}
-            onDeleteContact={this.deleteContact}
-          />
-        ) : (
-          <EmptyContactList>Contacts list is empty</EmptyContactList>
-        )}
-      </Container>
-    );
-  }
-}
+      <SectionHeader>Contacts</SectionHeader>
+      <Filter filter={filter} onChangeFilter={changeFilter} />
+      {contacts.length ? (
+        <ContactList
+          contacts={visibleContacts}
+          onDeleteContact={deleteContact}
+        />
+      ) : (
+        <EmptyContactList>Contacts list is empty</EmptyContactList>
+      )}
+      <Toaster position="top-right" />
+    </Container>
+  );
+};
