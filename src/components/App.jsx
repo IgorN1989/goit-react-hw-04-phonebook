@@ -21,7 +21,7 @@ const initialContacts = () => {
   if (savedContacts) {
     return JSON.parse(savedContacts);
   }
-  return '';
+  return [];
 };
 
 export const App = () => {
